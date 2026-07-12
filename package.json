@@ -1,0 +1,25 @@
+{
+  "name": "interview-ai-yt",
+  "version": "1.0.0",
+  "main": "index.js",
+"scripts": {
+  "dev": "concurrently \"npm run server\" \"npm run client\"",
+  "server": "cd backend && npm run dev",
+  "client": "cd frontend && npm run dev"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ankurdotio/interview-ai-yt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ankurdotio/interview-ai-yt/issues"
+  },
+  "homepage": "https://github.com/ankurdotio/interview-ai-yt#readme",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
