@@ -82,7 +82,11 @@ try {
 // PDF GENERATION (SAME RAHEGA)
 // -----------------------------
 async function generatePdfFromHtml(htmlContent) {
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
   const page = await browser.newPage();
 
   await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -98,7 +102,6 @@ async function generatePdfFromHtml(htmlContent) {
   });
 
   await browser.close();
-
   return pdfBuffer;
 }
 
@@ -108,12 +111,9 @@ async function generatePdfFromHtml(htmlContent) {
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
 
   const prompt = `
-Return ONLY JSON:
-{
-  "html": "<html>...</html>"
-}
+Generate a professional resume in clean HTML format.
 
-Generate a professional resume HTML.
+Return ONLY HTML (no JSON, no markdown, no explanation).
 
 Resume: ${resume}
 Self Description: ${selfDescription}
@@ -130,23 +130,10 @@ Job Description: ${jobDescription}
     ],
   });
 
-  const text = response.choices[0].message.content;
+  const html = response.choices[0].message.content;
 
-  const cleanText = text
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
-
-  let json;
-  try {
-    json = JSON.parse(cleanText);
-  } catch (err) {
-    console.log("Cleaned HTML Response:", cleanText);
-    throw new Error("Invalid JSON from AI");
-  }
-
-  return json; // ✅ VERY IMPORTANT
+  return html; // ✅ direct HTML return
 }
 
 
-module.exports = { generateInterviewReport, generateResumePdf };
+module.exports = { generateInterviewReport, generateResumePdf, generatePdfFromHtml };
