@@ -2,7 +2,7 @@ import axios from "axios"
 
 
 const api = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: "https://interview-assist-ai.onrender.com",
     withCredentials: true
 })
 
@@ -47,7 +47,8 @@ export async function logout() {
         return response.data
 
     } catch (err) {
-
+        console.error("Logout failed:", err.response?.data || err.message)
+        throw err; // taaki component handle kare
     }
 }
 
