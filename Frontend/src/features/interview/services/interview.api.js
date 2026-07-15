@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "https://interview-assist-ai-01.vercel.app",
+    baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3000" : "https://interview-assist-ai.onrender.com"),
     withCredentials: true,
 })
 
