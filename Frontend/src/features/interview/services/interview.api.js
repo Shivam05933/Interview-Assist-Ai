@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "https://interview-assist-ai-01.vercel.app/",
+    baseURL: "https://interview-assist-ai-01.vercel.app",
     withCredentials: true,
 })
 
