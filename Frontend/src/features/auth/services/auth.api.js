@@ -1,7 +1,7 @@
 import axios from "axios"
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3000" : "https://interview-assist-ai.onrender.com"),
+    baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "https://interview-assist-ai.onrender.com"),
     withCredentials: true,
 })
 
@@ -15,9 +15,8 @@ export async function register({ username, email, password }) {
         return response.data
 
     } catch (err) {
-
-        console.log(err)
-
+        console.error("Register failed:", err.response?.data || err.message)
+        throw new Error(err.response?.data?.message || "Registration failed. Please try again.")
     }
 
 }
@@ -33,7 +32,8 @@ export async function login({ email, password }) {
         return response.data
 
     } catch (err) {
-        console.log(err)
+        console.error("Login failed:", err.response?.data || err.message)
+        throw new Error(err.response?.data?.message || "Login failed. Please try again.")
     }
 
 }
@@ -60,7 +60,8 @@ export async function getMe() {
         return response.data
 
     } catch (err) {
-        console.log(err)
+        console.error("Get me failed:", err.response?.data || err.message)
+        throw new Error(err.response?.data?.message || "Unable to load your account right now.")
     }
 
 }

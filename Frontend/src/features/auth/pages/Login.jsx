@@ -10,11 +10,18 @@ const Login = () => {
 
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
+    const [ error, setError ] = useState("")
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleLogin({email,password})
-        navigate('/')
+        setError("")
+
+        try {
+            await handleLogin({email,password})
+            navigate('/home')
+        } catch (err) {
+            setError(err.message || "Login failed. Please try again.")
+        }
     }
 
     if(loading){
@@ -40,8 +47,9 @@ const Login = () => {
                             type="password" id="password" name='password' placeholder='Enter password' />
                     </div>
                     <button className='button primary-button' >Login</button>
+                    {error ? <p className='form-error'>{error}</p> : null}
                 </form>
-                <p>Don't have an account? <Link to={"/register"} >Register</Link> </p>
+                <p>Don't have an account? <Link to={"/signup"} >Register</Link> </p>
             </div>
         </main>
     )
