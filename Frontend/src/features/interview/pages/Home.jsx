@@ -179,7 +179,7 @@ e.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScri
             <footer className='flex gap-[1.5rem]'>
                 <a href='#' className='text-[0.8rem] text-[#7d8590] hover:text-[#e6edf3]'>Privacy Policy</a>
                 <a href='#' className='text-[0.8rem] text-[#7d8590] hover:text-[#e6edf3]'>Terms of Service</a>
-                <a href='#' className='text-[0.8rem] text-[#7d8590] hover:text-[#e6edf3]'>Help Center</a>
+              
             </footer>
 
         </div>
