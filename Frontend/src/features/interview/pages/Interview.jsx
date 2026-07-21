@@ -85,7 +85,7 @@ const Interview = () => {
 
   if (loading || !report) {
     return (
-      <main className="w-full min-h-screen flex items-center justify-center bg-[#0d1117] text-white">
+      <main className="w-full text-3xl  min-h-screen flex items-center justify-center bg-[#0d1117] text-white">
         Loading...
       </main>
     )
