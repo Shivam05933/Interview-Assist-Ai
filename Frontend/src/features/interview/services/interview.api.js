@@ -1,59 +1,74 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "https://interview-assist-ai.onrender.com"),
+    baseURL: import.meta.env.VITE_API_URL || 
+        (import.meta.env.DEV 
+            ? "http://localhost:5000" 
+            : "https://interview-assist-ai.onrender.com"),
     withCredentials: true,
 })
 
-
 /**
- * @description Service to generate interview report based on user self description, resume and job description.
+ * Generate Interview Report
  */
 export const generateInterviewReport = async ({ jobDescription, selfDescription, resumeFile }) => {
+    try {
+        const formData = new FormData()
 
-    const formData = new FormData()
-    formData.append("jobDescription", jobDescription)
-    formData.append("selfDescription", selfDescription)
-    formData.append("resume", resumeFile)
-
-    const response = await api.post("/api/interview/", formData, {
-        headers: {
-            "Content-Type": "multipart/form-data"
+        formData.append("jobDescription", jobDescription)
+        formData.append("selfDescription", selfDescription)
+        if (resumeFile) {
+            formData.append("resume", resumeFile)
         }
-    })
 
-    return response.data
+        const response = await api.post("/api/interview", formData)
 
+        return response.data
+
+    } catch (error) {
+        throw error.response?.data || { message: "Something went wrong" }
+    }
 }
 
-
 /**
- * @description Service to get interview report by interviewId.
+ * Get Interview Report by ID
  */
 export const getInterviewReportById = async (interviewId) => {
-    const response = await api.get(`/api/interview/report/${interviewId}`)
-
-    return response.data
+    try {
+        const response = await api.get(`/api/interview/report/${interviewId}`)
+        return response.data
+    } catch (error) {
+        throw error.response?.data || { message: "Failed to fetch report" }
+    }
 }
 
-
 /**
- * @description Service to get all interview reports of logged in user.
+ * Get All Interview Reports
  */
 export const getAllInterviewReports = async () => {
-    const response = await api.get("/api/interview/")
-
-    return response.data
+    try {
+        const response = await api.get("/api/interview")
+        return response.data
+    } catch (error) {
+        throw error.response?.data || { message: "Failed to fetch reports" }
+    }
 }
 
-
 /**
- * @description Service to generate resume pdf based on user self description, resume content and job description.
+ * Generate Resume PDF
  */
-export const generateResumePdf = async ({ interviewReportId }) => {
-    const response = await api.post(`/api/interview/resume/pdf/${interviewReportId}`, null, {
-        responseType: "blob"
-    })
+export const generateResumePdf = async (interviewReportId) => {
+    try {
+        const response = await api.post(
+            `/api/interview/resume/pdf/${interviewReportId}`,
+            null,
+            { responseType: "blob" }
+        )
 
-    return response.data
+        // response.data is already a Blob because responseType is 'blob'
+        return response.data
+
+    } catch (error) {
+        throw error.response?.data || { message: "Failed to generate PDF" }
+    }
 }

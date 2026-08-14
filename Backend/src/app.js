@@ -15,19 +15,19 @@ const allowedOrigins = [
 
 app.use(express.json())
 app.use(cookieParser())
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true)
-      return
+      return callback(null, true)
     }
 
-    callback(new Error("Not allowed by CORS"))
+    return callback(null, false) // ✅ SAFE
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
 }))
+
+
 
 app.get("/", (req, res) => {
   res.send("API is running 🚀")

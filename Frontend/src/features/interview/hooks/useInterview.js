@@ -3,7 +3,6 @@ import { useContext, useEffect } from "react"
 import { InterviewContext } from "../interview.context"
 import { useParams } from "react-router"
 
-
 export const useInterview = () => {
 
     const context = useContext(InterviewContext)
@@ -17,62 +16,96 @@ export const useInterview = () => {
 
     const generateReport = async ({ jobDescription, selfDescription, resumeFile }) => {
         setLoading(true)
-        let response = null
         try {
-            response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
+            const response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
+
+            if (!response || !response.interviewReport) {
+                throw new Error("Invalid response from backend")
+            }
+
+            console.log("INTERVIEW REPORT (generate):", response.interviewReport)
+            console.log("TECHNICAL QUESTIONS:", response.interviewReport?.technicalQuestions)
+            console.log("BEHAVIORAL QUESTIONS:", response.interviewReport?.behavioralQuestions)
+            console.log("ROADMAP:", response.interviewReport?.roadmap)
+            console.log("MISSING SKILLS:", response.interviewReport?.missingSkills)
+            console.log("STRONG SKILLS:", response.interviewReport?.strongSkills)
+
             setReport(response.interviewReport)
+            return response.interviewReport
+
         } catch (error) {
-            console.log(error)
+            console.error("Generate Report Error:", error)
+            return null
         } finally {
             setLoading(false)
         }
-
-        return response.interviewReport
     }
 
     const getReportById = async (interviewId) => {
         setLoading(true)
-        let response = null
         try {
-            response = await getInterviewReportById(interviewId)
+            const response = await getInterviewReportById(interviewId)
+
+            if (!response || !response.interviewReport) {
+                throw new Error("Invalid response from backend")
+            }
+
+            console.log("INTERVIEW REPORT:", response.interviewReport)
+            console.log("TECHNICAL QUESTIONS:", response.interviewReport?.technicalQuestions)
+            console.log("BEHAVIORAL QUESTIONS:", response.interviewReport?.behavioralQuestions)
+            console.log("ROADMAP:", response.interviewReport?.roadmap)
+            console.log("MISSING SKILLS:", response.interviewReport?.missingSkills)
+            console.log("STRONG SKILLS:", response.interviewReport?.strongSkills)
+
             setReport(response.interviewReport)
+            return response.interviewReport
+
         } catch (error) {
-            console.log(error)
+            console.error("Get Report By ID Error:", error)
+            return null
         } finally {
             setLoading(false)
         }
-        return response.interviewReport
     }
 
     const getReports = async () => {
         setLoading(true)
-        let response = null
         try {
-            response = await getAllInterviewReports()
+            const response = await getAllInterviewReports()
+
+            if (!response || !response.interviewReports) {
+                throw new Error("Invalid response from backend")
+            }
+
             setReports(response.interviewReports)
+            return response.interviewReports
+
         } catch (error) {
-            console.log(error)
+            console.error("Get Reports Error:", error)
+            return []
         } finally {
             setLoading(false)
         }
-
-        return response.interviewReports
     }
 
     const getResumePdf = async (interviewReportId) => {
+        if (!interviewReportId) return
         setLoading(true)
-        let response = null
         try {
-            response = await generateResumePdf({ interviewReportId })
-            const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
+            // generateResumePdf returns a Blob (response.data from API)
+            const pdfBlob = await generateResumePdf(interviewReportId)
+
+            const url = window.URL.createObjectURL(pdfBlob)
             const link = document.createElement("a")
             link.href = url
             link.setAttribute("download", `resume_${interviewReportId}.pdf`)
             document.body.appendChild(link)
             link.click()
-        }
-        catch (error) {
-            console.log(error)
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+
+        } catch (error) {
+            console.error("PDF Download Error:", error)
         } finally {
             setLoading(false)
         }
@@ -84,8 +117,7 @@ export const useInterview = () => {
         } else {
             getReports()
         }
-    }, [ interviewId ])
+    }, [interviewId])
 
     return { loading, report, reports, generateReport, getReportById, getReports, getResumePdf }
-
 }

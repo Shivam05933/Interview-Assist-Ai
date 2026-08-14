@@ -1,25 +1,71 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
-
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
     username: {
-        type: String,
-        unique: [ true, "username already taken" ],
-        required: true,
+      type: String,
+      unique: true,
+      required: true,
+      trim: true,
     },
 
     email: {
-        type: String,
-        unique: [ true, "Account already exists with this email address" ],
-        required: true,
+      type: String,
+      unique: true,
+      required: true,
+      lowercase: true,
+      trim: true,
     },
 
     password: {
-        type: String,
-        required: true
-    }
-})
+      type: String,
+      required: true,
+  
+      select: false, // 🔥 password default me return nahi hoga
+    },
 
-const userModel = mongoose.model("users", userSchema)
+    // Optional future scaling
+    interviews: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "InterviewReport",
+      },
+    ],
+  },
+  {
+    timestamps: true, // 🔥 createdAt, updatedAt auto
+  }
+);
 
-module.exports = userModel
+// 🔥 YAHI PE USE KARNA HAI (IMPORTANT)
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+
+
+
+// 🔑 PASSWORD COMPARE METHOD
+userSchema.methods.comparePassword = async function (userPassword) {
+  return await bcrypt.compare(userPassword, this.password);
+};
+
+
+// 🔑 JWT TOKEN GENERATE
+userSchema.methods.generateAuthToken = function () {
+  return jwt.sign(
+    { id: this._id },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+};
+
+
+const userModel = mongoose.model("users", userSchema);
+
+module.exports = userModel;

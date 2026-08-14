@@ -2,11 +2,11 @@
   "name": "interview-ai-yt",
   "version": "1.0.0",
   "main": "index.js",
-"scripts": {
-  "dev": "concurrently \"npm run server\" \"npm run client\"",
-  "server": "cd backend && npm run dev",
-  "client": "cd frontend && npm run dev"
-},
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm run dev"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ankurdotio/interview-ai-yt.git"
@@ -21,5 +21,9 @@
   "description": "",
   "devDependencies": {
     "concurrently": "^10.0.3"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "mongodb": "^7.5.0"
   }
 }

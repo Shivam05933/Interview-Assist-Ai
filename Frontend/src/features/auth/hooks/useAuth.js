@@ -23,27 +23,28 @@ export const useAuth = () => {
         }
     }
 
-    const handleRegister = async ({ username, email, password }) => {
-        setLoading(true)
-        try {
-            const data = await register({ username, email, password })
-            setUser(data?.user ?? null)
-            return data
-        } catch (err) {
-            throw err
-        } finally {
-            setLoading(false)
-        }
+const handleRegister = async ({ username, email, password }) => {
+    setLoading(true)
+    try {
+        // ✅ FIX
+        const data = await register({ username, email, password })
+        setUser(data?.user ?? null)
+        return data
+    } catch (err) {
+        throw err
+    } finally {
+        setLoading(false)
     }
+}
 
     const handleLogout = async () => {
         setLoading(true)
         try {
             await logout()
-            setUser(null)
         } catch (err) {
-            throw err
+            console.error("Logout API error:", err)
         } finally {
+            setUser(null)
             setLoading(false)
         }
     }
