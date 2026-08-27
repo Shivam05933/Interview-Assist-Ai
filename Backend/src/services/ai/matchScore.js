@@ -1,132 +1,162 @@
 const { safeAICall } = require("./utils");
 
-async function getMatchScore(jobDescription, resume, selfDescription) {
+/**
+ * AI Career & Interview Intelligence Prompt Engine
+ */
+async function getMatchScore(jobDescription, resumeText, selfDescription) {
   const prompt = `
-You are an expert Technical Career Architect, Senior Staff Engineer, ATS Specialist, and Engineering Mentor.
+You are an expert AI Career Analysis & Domain Intelligence Engine.
 
-Your job is to perform a COMPLETE, HIGHLY ACCURATE, and PRACTICAL career-gap analysis and interview preparation package.
+You must analyze user input for ANY target role across ANY profession (IT, Software, Commerce, Accounting, Finance, Mechanical, Civil, Electrical, Healthcare, Law, Sales, Education, Architecture, Research, or any other domain).
 
-INPUTS:
-- TARGET JOB DESCRIPTION:
-${jobDescription}
+INPUT DATA:
+- TARGET ROLE / JOB DESCRIPTION:
+"${jobDescription || 'Not specified'}"
 
 - CANDIDATE SELF DESCRIPTION:
-${selfDescription}
+"${selfDescription || 'Not specified'}"
 
-- CANDIDATE RESUME:
-${resume}
+- CANDIDATE RESUME TEXT:
+"${resumeText || 'No resume uploaded'}"
 
-INSTRUCTIONS:
-1. Identify the target role and core tech stack strictly from the job description.
-2. Analyze candidate's current skill level strictly from provided evidence.
-3. Identify missing skills, categorized recommended stack, step-by-step learning order, and project roadmap.
-4. Provide a realistic 0-100 matchScore.
-5. Generate 5 scenario-based technical questions with clear answers.
-6. Generate 3 behavioral interview questions with STAR method answers.
-7. Provide an 8-step career roadmap summary.
-8. Build a clean, ATS-friendly candidate resume profile.
+CRITICAL SYSTEM DIRECTIVES & RULES:
+
+1. TARGET ROLE vs CURRENT USER CAPABILITY SEPARATION:
+   - "TARGET ROLE" tells where the user wants to go.
+   - "CURRENT USER CAPABILITY" tells where the user is right now.
+   - The Target Role MUST NEVER be treated as evidence that the user knows the skills required for that role!
+
+2. USER EVIDENCE EXTRACTION (NO HALLUCINATED USER FACTS):
+   - Extract user known skills ONLY from explicit evidence in CANDIDATE SELF DESCRIPTION or CANDIDATE RESUME TEXT.
+   - If user says "I only know node.js", then:
+     knownSkills = ["Node.js"]
+     partialSkills = []
+     strongSkills = []
+   - DO NOT automatically add JavaScript, Express.js, REST APIs, MongoDB, SQL, Git, Docker, etc., unless explicitly stated by user. Association does NOT equal evidence!
+   - If user says "I have basic knowledge of Express.js", then Express.js = PARTIAL.
+   - If NO RESUME text is provided, the "resume" JSON object MUST have empty/null strings and empty arrays for name, experience, projects. NEVER invent "John Doe" or fake companies!
+
+3. DYNAMIC ROLE REQUIREMENT MATRIX:
+   - Generate a "requirementMatrix" array containing 8 to 15 real, domain-specific core competencies required for the target role.
+   - For each requirement, specify:
+     * skill: Name of required competency
+     * category: Category appropriate to the domain (e.g. Core Principles / Systems / Audit / Compliance / Design)
+     * importance: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
+     * expectedLevel: "Beginner" | "Intermediate" | "Advanced"
+     * whyRequired: Why this competency is required for the target role.
+   - DO NOT use the same static skill list for every career. Adapt dynamically to the target role.
+
+4. ROADMAP PERSONALIZATION:
+   - The roadmap and learningOrder MUST start with the earliest missing prerequisite.
+   - DO NOT start the roadmap with skills the user already explicitly knows (e.g., if user knows Node.js, do NOT restart them with "Learn Node.js basics").
+
+5. REQUIRED QUANTITIES & STRUCTURE:
+   - "missingSkills": 5 to 10 specific missing competencies based on unfulfilled requirements.
+   - "learningOrder": 4 to 8 sequential steps progressing logically.
+   - "projectRoadmap": EXACTLY 3 to 5 domain-specific projects (Beginner -> Intermediate -> Advanced Portfolio).
+   - "technicalQuestions": EXACTLY 5 to 8 domain-specific technical or professional interview questions with 2-3 sentence clear solutions.
+   - "behavioralQuestions": EXACTLY 5 to 8 behavioral questions customized for the target role with STAR method answers.
+   - "roadmap": 4 to 6 career roadmap phases.
+   - "recommendedStack": Map domain tools into 7 categories (frontend, backend, database, security, tools, testing, deployment). Populate each with real domain items adapted to the candidate's field (e.g., for accounting: Tally/SAP under database, Tax Laws under security; for mechanical: CAD under frontend, FEA under backend; for software: standard dev tools).
 
 STRICT JSON OUTPUT CONTRACT:
-Return ONLY a single valid JSON object. No markdown, no code fences (\`\`\`), no text before or after JSON.
+Return ONLY a single valid JSON object. No markdown, no wrappers, no code fences.
 
-Required JSON Structure:
+JSON Schema:
 {
-  "matchScore": 70,
   "title": "Target Role Title",
   "targetRole": "Target Role Title",
-  "currentLevel": "Intermediate",
-  "summary": "Clear executive summary of candidate readiness and main gaps.",
-  "strongSkills": ["Skill 1", "Skill 2"],
+  "currentLevel": "Beginner | Intermediate | Advanced",
+  "summary": "Factual executive summary of candidate domain readiness based ONLY on evidence.",
   "knownSkills": ["Skill 1"],
-  "partialSkills": ["Skill 1"],
+  "partialSkills": [],
+  "strongSkills": [],
+  "requirementMatrix": [
+    {
+      "skill": "Required Skill Name",
+      "category": "Domain Category",
+      "importance": "CRITICAL | HIGH | MEDIUM | LOW",
+      "expectedLevel": "Beginner | Intermediate | Advanced",
+      "whyRequired": "Why required for this role"
+    }
+  ],
   "missingSkills": [
     {
       "skill": "Skill Name",
-      "category": "Frontend | Backend | Database | Security | Tools | Testing | Deployment",
+      "category": "Domain Category",
       "status": "missing",
       "priority": "critical | high | medium | low",
-      "whyRequired": "Explanation of why this skill is needed.",
+      "whyRequired": "Why required",
       "whatToLearn": ["Topic 1", "Topic 2"],
-      "prerequisites": ["Prereq 1"],
+      "prerequisites": ["Prerequisite 1"],
       "recommendedTools": ["Tool 1"],
       "recommendedFrameworks": ["Framework 1"],
-      "jobReadyOutcome": "Practical outcome after learning this skill."
+      "jobReadyOutcome": "Practical outcome"
     }
   ],
   "criticalGaps": ["Gap 1", "Gap 2"],
   "recommendedStack": {
-    "frontend": { "core": ["React"], "recommended": ["Redux Toolkit"], "optional": ["Framer Motion"] },
-    "backend": { "core": ["Node.js"], "recommended": ["Express"], "optional": ["NestJS"] },
-    "database": { "core": ["MongoDB"], "recommended": ["Redis"], "optional": ["PostgreSQL"] },
-    "security": { "core": ["JWT"], "recommended": ["bcrypt"], "optional": ["OAuth2"] },
-    "tools": { "core": ["Git"], "recommended": ["Postman"], "optional": ["Docker"] },
-    "testing": { "core": ["Jest"], "recommended": ["Supertest"], "optional": ["Cypress"] },
-    "deployment": { "core": ["Vercel"], "recommended": ["Docker"], "optional": ["AWS"] }
+    "frontend": { "core": ["Core Domain Tool 1"], "recommended": ["Tool 2"], "optional": ["Tool 3"] },
+    "backend": { "core": ["Advanced Domain System 1"], "recommended": ["System 2"], "optional": ["System 3"] },
+    "database": { "core": ["Data / ERP System 1"], "recommended": ["System 2"], "optional": ["System 3"] },
+    "security": { "core": ["Compliance / Security 1"], "recommended": ["Standard 2"], "optional": ["Rule 3"] },
+    "tools": { "core": ["Primary Software 1"], "recommended": ["Software 2"], "optional": ["Software 3"] },
+    "testing": { "core": ["Audit / Quality Practice 1"], "recommended": ["Practice 2"], "optional": ["Practice 3"] },
+    "deployment": { "core": ["Filing / Delivery Practice 1"], "recommended": ["Practice 2"], "optional": ["Practice 3"] }
   },
   "learningOrder": [
     {
       "step": 1,
-      "skill": "Skill Name",
-      "category": "Backend",
-      "whyNow": "Why to learn this step first.",
-      "prerequisites": ["HTML/CSS"],
+      "skill": "Missing Prerequisite / Skill Name",
+      "category": "Domain Category",
+      "whyNow": "Why this step is next",
+      "prerequisites": [],
       "topics": ["Topic 1", "Topic 2"],
       "recommendedTools": ["Tool 1"],
-      "recommendedFrameworks": ["Framework 1"],
-      "project": "Mini project title for this step",
-      "expectedOutcome": "What student will achieve"
+      "recommendedFrameworks": [],
+      "project": "Hands-on domain exercise for this step",
+      "expectedOutcome": "Outcome achieved"
     }
   ],
   "projectRoadmap": [
     {
       "projectNumber": 1,
-      "projectName": "Project Name",
-      "skillsPracticed": ["Skill 1"],
+      "projectName": "Domain-Specific Project Title",
+      "skillsPracticed": ["Skill 1", "Skill 2"],
       "tools": ["Tool 1"],
       "difficulty": "beginner | intermediate | advanced",
-      "purpose": "Portfolio project purpose."
+      "purpose": "Specific domain learning purpose"
     }
   ],
   "technicalQuestions": [
     {
-      "question": "Scenario based technical question for this role",
+      "question": "Domain-specific technical or scenario question for this target role",
       "intention": "easy | medium | hard",
-      "answer": "Detailed solution and explanation"
+      "answer": "Concise 2-3 sentence clear solution and explanation."
     }
   ],
   "behavioralQuestions": [
     {
-      "question": "Behavioral question",
-      "intention": "Teamwork | Conflict | Leadership",
-      "answer": "STAR method sample answer"
+      "question": "Behavioral question customized for this target role and field",
+      "intention": "Teamwork | Leadership | Problem Solving | Conflict",
+      "answer": "Concise STAR method sample answer."
     }
   ],
   "roadmap": [
     {
       "step": "1",
       "title": "Phase Title",
-      "description": "Step description and project"
+      "description": "Milestone description"
     }
   ],
   "resume": {
-    "name": "Candidate Name",
-    "title": "Target Role",
-    "skills": ["Skill 1", "Skill 2"],
-    "experience": [
-      {
-        "role": "Role Title",
-        "company": "Company",
-        "points": ["Key achievement 1", "Key achievement 2"]
-      }
-    ],
-    "projects": [
-      {
-        "name": "Project Name",
-        "points": ["Project highlight 1", "Project highlight 2"]
-      }
-    ]
+    "name": "",
+    "title": "",
+    "skills": [],
+    "experience": [],
+    "projects": []
   },
-  "reason": "Brief summary explanation of the match score calculation."
+  "reason": "Clear explanation of readiness gap assessment."
 }
 `;
 

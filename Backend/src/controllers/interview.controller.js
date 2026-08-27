@@ -6,21 +6,21 @@ const { generateInterviewReport, generatePdfFromHtml } = require("../services/ai
 function validateAIResponse(aiData) {
   if (!aiData) return false;
 
-  if (typeof aiData.matchScore !== "number") {
-    if (typeof aiData.matchScore === "string" && !isNaN(Number(aiData.matchScore))) {
-      aiData.matchScore = Number(aiData.matchScore);
-    } else {
-      aiData.matchScore = 50;
-    }
+  if (typeof aiData.matchScore !== "number" || isNaN(aiData.matchScore)) {
+    aiData.matchScore = 10;
   }
 
   if (!aiData.title && !aiData.targetRole) {
-    aiData.title = "Software Engineer";
-    aiData.targetRole = "Software Engineer";
+    aiData.title = "Target Professional Role";
+    aiData.targetRole = "Target Professional Role";
   }
 
-  if (!Array.isArray(aiData.technicalQuestions)) aiData.technicalQuestions = [];
-  if (!Array.isArray(aiData.behavioralQuestions)) aiData.behavioralQuestions = [];
+  if (!Array.isArray(aiData.technicalQuestions) || aiData.technicalQuestions.length < 5) {
+    console.warn(`⚠️ [Controller Validation] technicalQuestions count is ${aiData.technicalQuestions?.length || 0}`);
+  }
+  if (!Array.isArray(aiData.behavioralQuestions) || aiData.behavioralQuestions.length < 5) {
+    console.warn(`⚠️ [Controller Validation] behavioralQuestions count is ${aiData.behavioralQuestions?.length || 0}`);
+  }
 
   return true;
 }
@@ -32,7 +32,7 @@ async function generateInterviewReportController(req, res) {
   try {
     let resumeText = "";
 
-    // ✅ Extract text from uploaded PDF
+    // Extract text from uploaded PDF
     if (req.file) {
       const data = await pdfParse(req.file.buffer);
       resumeText = data.text;
@@ -40,7 +40,7 @@ async function generateInterviewReportController(req, res) {
 
     const { selfDescription, jobDescription } = req.body;
 
-    // ✅ Validation
+    // Validation
     if (!resumeText && !selfDescription) {
       return res.status(400).json({
         message: "Either resume or self description is required",
@@ -53,33 +53,38 @@ async function generateInterviewReportController(req, res) {
       });
     }
 
-    // ✅ AI call
+    // AI Call via Analysis Pipeline
     const aiData = await generateInterviewReport({
       resume: resumeText || "",
       selfDescription: selfDescription || "",
       jobDescription: jobDescription || "",
     });
 
-    // 🔥 DEBUG (console me AI ka data dikhega)
-    console.log("AI RESPONSE:", JSON.stringify(aiData, null, 2));
+    console.log("AI RESPONSE SUMMARY:", {
+      targetRole: aiData.targetRole,
+      matchScore: aiData.matchScore,
+      knownSkills: aiData.knownSkills,
+      partialSkills: aiData.partialSkills,
+      missingSkillsCount: aiData.missingSkills?.length,
+      technicalQuestionsCount: aiData.technicalQuestions?.length,
+      behavioralQuestionsCount: aiData.behavioralQuestions?.length
+    });
 
-    // 🔥 VALIDATION
     if (!validateAIResponse(aiData)) {
       return res.status(500).json({
         message: "AI returned incomplete or invalid data",
       });
     }
 
-    // 🔥 SAFE DATA
     const rawStack = aiData.recommendedStack || {};
     const emptyCategory = { core: [], recommended: [], optional: [] };
 
     const safeAIData = {
-      matchScore: typeof aiData.matchScore === "number" ? aiData.matchScore : 0,
+      matchScore: typeof aiData.matchScore === "number" ? aiData.matchScore : 10,
       title: aiData.title || aiData.targetRole || "Untitled Role",
-      targetRole: aiData.targetRole || aiData.title || "Full Stack Developer",
+      targetRole: aiData.targetRole || aiData.title || "Target Role",
       summary: aiData.summary || "",
-      currentLevel: aiData.currentLevel || "",
+      currentLevel: aiData.currentLevel || "Beginner",
 
       strongSkills: Array.isArray(aiData.strongSkills) ? aiData.strongSkills : [],
       knownSkills: Array.isArray(aiData.knownSkills) ? aiData.knownSkills : [],
@@ -89,9 +94,9 @@ async function generateInterviewReportController(req, res) {
             if (typeof item === 'object' && item !== null) {
               return {
                 skill: item.skill || "",
-                category: item.category || "",
+                category: item.category || "General Domain Skill",
                 status: item.status || "missing",
-                priority: item.priority || "critical",
+                priority: item.priority || "high",
                 whyRequired: item.whyRequired || "",
                 whatToLearn: Array.isArray(item.whatToLearn) ? item.whatToLearn : [],
                 recommendedTools: Array.isArray(item.recommendedTools) ? item.recommendedTools : [],
@@ -104,9 +109,9 @@ async function generateInterviewReportController(req, res) {
             }
             return {
               skill: String(item),
-              category: "General",
+              category: "General Domain Skill",
               status: "missing",
-              priority: "critical",
+              priority: "high",
               whyRequired: "",
               whatToLearn: [],
               recommendedTools: [],
@@ -133,7 +138,7 @@ async function generateInterviewReportController(req, res) {
         ? aiData.learningOrder.map((step, idx) => ({
             step: typeof step.step === 'number' ? step.step : idx + 1,
             skill: step.skill || step.title || "",
-            category: step.category || "",
+            category: step.category || "Domain Skill",
             whyNow: step.whyNow || "",
             prerequisites: Array.isArray(step.prerequisites) ? step.prerequisites : [],
             topics: Array.isArray(step.topics) ? step.topics : [],
@@ -149,7 +154,7 @@ async function generateInterviewReportController(req, res) {
       projectRoadmap: Array.isArray(aiData.projectRoadmap)
         ? aiData.projectRoadmap.map((p, idx) => ({
             projectNumber: typeof p.projectNumber === 'number' ? p.projectNumber : idx + 1,
-            projectName: p.projectName || "",
+            projectName: p.projectName || `Domain Project ${idx + 1}`,
             skillsPracticed: Array.isArray(p.skillsPracticed) ? p.skillsPracticed : [],
             tools: Array.isArray(p.tools) ? p.tools : [],
             difficulty: p.difficulty || "beginner",
@@ -178,12 +183,7 @@ async function generateInterviewReportController(req, res) {
       resume: aiData.resume || {},
     };
 
-    console.log(
-      "SAFE AI DATA:",
-      JSON.stringify(safeAIData, null, 2)
-    );
-
-    // ✅ Save to DB (clean structured fields)
+    // Save to DB
     const interviewReport = await interviewReportModel.create({
       user: req.user._id,
       resume: resumeText,
@@ -214,10 +214,7 @@ async function generateInterviewReportController(req, res) {
       resumeData: safeAIData.resume,
     });
 
-    console.log(
-      "SAVED INTERVIEW REPORT:",
-      JSON.stringify(interviewReport, null, 2)
-    );
+    console.log("SAVED INTERVIEW REPORT ID:", interviewReport._id);
 
     res.status(201).json({
       message: "Interview report generated successfully.",
@@ -225,7 +222,7 @@ async function generateInterviewReportController(req, res) {
     });
 
   } catch (error) {
-    console.error("ERROR:", error.message);
+    console.error("ERROR in generateInterviewReportController:", error.message);
     
     if (error instanceof multer.MulterError) {
       return res.status(400).json({
@@ -263,7 +260,7 @@ async function getInterviewReportByIdController(req, res) {
     });
 
   } catch (error) {
-    console.error("ERROR:", error.message);
+    console.error("ERROR in getInterviewReportByIdController:", error.message);
     
     if (error instanceof multer.MulterError) {
       return res.status(400).json({
@@ -295,7 +292,7 @@ async function getAllInterviewReportsController(req, res) {
     });
 
   } catch (error) {
-    console.error("ERROR:", error.message);
+    console.error("ERROR in getAllInterviewReportsController:", error.message);
   
     if (error instanceof multer.MulterError) {
       return res.status(400).json({
@@ -316,7 +313,6 @@ async function generateResumePdfController(req, res) {
   try {
     const { interviewReportId } = req.params;
 
-    // ✅ Secure fetch
     const interviewReport = await interviewReportModel.findOne({
       _id: interviewReportId,
       user: req.user._id,
@@ -336,7 +332,6 @@ async function generateResumePdfController(req, res) {
       });
     }
 
-    // ✅ Convert JSON → HTML
     const html = `
       <h1>${resumeData.name || ""}</h1>
       <h2>${resumeData.title || ""}</h2>
@@ -355,7 +350,6 @@ async function generateResumePdfController(req, res) {
       `).join("")}
     `;
 
-    // ✅ HTML → PDF
     const pdfBuffer = await generatePdfFromHtml(html);
 
     res.set({
@@ -366,7 +360,7 @@ async function generateResumePdfController(req, res) {
     res.send(pdfBuffer);
 
   } catch (error) {
-    console.error("ERROR:", error.message);
+    console.error("ERROR in generateResumePdfController:", error.message);
 
     if (error instanceof multer.MulterError) {
       return res.status(400).json({

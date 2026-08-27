@@ -17,10 +17,10 @@ async function getAvailableModels(groq) {
 
   const preferredModels = [
     process.env.GROQ_MODEL,
-    "openai/gpt-oss-20b",
-    "groq/compound-mini",
-    "qwen/qwen3.6-27b",
-    "openai/gpt-oss-120b"
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it"
   ].filter(Boolean);
 
   try {
@@ -89,6 +89,69 @@ async function callAI(prompt) {
   throw lastError || new Error("All fallback AI models failed.");
 }
 
+// Attempt to repair truncated JSON strings
+function repairTruncatedJSON(cleanText) {
+  const firstOpen = cleanText.indexOf("{");
+  if (firstOpen === -1) return null;
+
+  let str = cleanText.substring(firstOpen).trim();
+
+  let inString = false;
+  let escape = false;
+  const stack = [];
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (char === "\\") {
+      escape = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (!inString) {
+      if (char === "{") stack.push("}");
+      else if (char === "[") stack.push("]");
+      else if (char === "}" || char === "]") {
+        if (stack.length > 0 && stack[stack.length - 1] === char) {
+          stack.pop();
+        }
+      }
+    }
+  }
+
+  // If stuck inside string, close string
+  if (inString) {
+    str += '"';
+  }
+
+  // Clean trailing commas, colons, or whitespace before closing structures
+  str = str.replace(/,\s*$/, "").replace(/:\s*$/, "");
+
+  // Close remaining nested brackets and braces in reverse order
+  while (stack.length > 0) {
+    const closingChar = stack.pop();
+    str += closingChar;
+  }
+
+  try {
+    const parsed = JSON.parse(str);
+    if (parsed && (parsed.matchScore !== undefined || parsed.targetRole || parsed.title || parsed.missingSkills)) {
+      console.log("🔧 [AI] Successfully repaired truncated JSON response.");
+      return parsed;
+    }
+  } catch (err) {
+    // Repair attempt failed
+  }
+
+  return null;
+}
+
 // Extract JSON safely
 function extractJSON(text) {
   if (!text) throw new Error("Empty response from AI");
@@ -111,9 +174,13 @@ function extractJSON(text) {
     try {
       return JSON.parse(candidate);
     } catch (e) {
-      // Fall through to scanner if outer substring had invalid characters
+      // Fall through to repair / scanner
     }
   }
+
+  // Try repairing truncated JSON
+  const repaired = repairTruncatedJSON(cleanText);
+  if (repaired) return repaired;
 
   // Scan balanced braces to collect top-level valid JSON objects
   let depth = 0;
@@ -163,10 +230,9 @@ function extractJSON(text) {
   if (candidates.length > 0) {
     // Prioritize object containing key root fields
     const rootObj = candidates.find(
-      c => c && (c.matchScore !== undefined || c.targetRole || c.questions || c.roadmap)
+      c => c && (c.matchScore !== undefined || c.targetRole || c.title || c.missingSkills || c.technicalQuestions || c.roadmap)
     );
     if (rootObj) return rootObj;
-    return candidates[0];
   }
 
   throw new Error("Invalid JSON structure in AI response");

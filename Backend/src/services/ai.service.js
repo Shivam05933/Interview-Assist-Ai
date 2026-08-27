@@ -1,10 +1,11 @@
-const getMatchScore = require("./ai/matchScore");
+const { runCareerAnalysisPipeline } = require("./ai/analysisPipeline");
 
-// MAIN FUNCTION
+/**
+ * Main Entry Point for AI Interview Report Generation
+ */
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
   try {
-    // Single unified completion call for ultra-fast response (3-5 seconds) and zero rate limit errors
-    const reportData = await getMatchScore(jobDescription, resume, selfDescription);
+    const reportData = await runCareerAnalysisPipeline({ resume, selfDescription, jobDescription });
 
     return {
       ...reportData,
