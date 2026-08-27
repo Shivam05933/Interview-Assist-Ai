@@ -23,13 +23,23 @@ const Home = () => {
   };
 
   const handleGenerateReport = async () => {
-    const resumeFile = resumeInputRef.current.files[0];
-    const data = await generateReport({
-      jobDescription,
-      selfDescription,
-      resumeFile,
-    });
-    navigate(`/interview/${data._id}`);
+    try {
+      const resumeFile = resumeInputRef.current?.files?.[0];
+      const data = await generateReport({
+        jobDescription,
+        selfDescription,
+        resumeFile,
+      });
+
+      if (data && data._id) {
+        navigate(`/interview/${data._id}`);
+      } else {
+        alert("Unable to generate interview report. Please try again.");
+      }
+    } catch (err) {
+      console.error("Report generation error:", err);
+      alert("An unexpected error occurred while generating your report.");
+    }
   };
 
   if (loading) {

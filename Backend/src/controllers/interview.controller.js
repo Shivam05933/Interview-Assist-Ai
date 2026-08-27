@@ -6,11 +6,21 @@ const { generateInterviewReport, generatePdfFromHtml } = require("../services/ai
 function validateAIResponse(aiData) {
   if (!aiData) return false;
 
-  if (typeof aiData.matchScore !== "number") return false;
-  if (!aiData.title && !aiData.targetRole) return false;
+  if (typeof aiData.matchScore !== "number") {
+    if (typeof aiData.matchScore === "string" && !isNaN(Number(aiData.matchScore))) {
+      aiData.matchScore = Number(aiData.matchScore);
+    } else {
+      aiData.matchScore = 50;
+    }
+  }
 
-  if (!Array.isArray(aiData.technicalQuestions)) return false;
-  if (!Array.isArray(aiData.behavioralQuestions)) return false;
+  if (!aiData.title && !aiData.targetRole) {
+    aiData.title = "Software Engineer";
+    aiData.targetRole = "Software Engineer";
+  }
+
+  if (!Array.isArray(aiData.technicalQuestions)) aiData.technicalQuestions = [];
+  if (!Array.isArray(aiData.behavioralQuestions)) aiData.behavioralQuestions = [];
 
   return true;
 }

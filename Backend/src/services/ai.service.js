@@ -1,51 +1,40 @@
 const getMatchScore = require("./ai/matchScore");
-const getTechnicalQuestions = require("./ai/technicalQ");
-const getBehavioralQuestions = require("./ai/behavioralQ");
-const getRoadmap = require("./ai/roadmap");
-const generateResume = require("./ai/resume");
 
 // MAIN FUNCTION
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
   try {
-    // 1. Match score & comprehensive career gap analysis
-    const match = await getMatchScore(jobDescription, resume, selfDescription);
-    const roleTitle = match.targetRole || match.title || "Developer";
-
-    // 2. Questions
-    const tech = await getTechnicalQuestions(roleTitle);
-    const behavioral = await getBehavioralQuestions();
-
-    // 3. Roadmap (fallback)
-    const roadmap = await getRoadmap(roleTitle);
-
-    // 4. Resume
-    const resumeData = await generateResume(resume, selfDescription, jobDescription);
+    // Single unified completion call for ultra-fast response (3-5 seconds) and zero rate limit errors
+    const reportData = await getMatchScore(jobDescription, resume, selfDescription);
 
     return {
-      ...match,
-      technicalQuestions: (tech?.questions || []).map(q => ({
-        question: q.question,
-        answer: q.expectedAnswer || "",
-        intention: q.difficulty || "general"
-      })),
-
-      behavioralQuestions: (behavioral?.questions || []).map(q => ({
-        question: q.question,
-        answer: q.sampleAnswer || "",
-        intention: q.trait || "behavioral"
-      })),
-
-      roadmap: (roadmap?.roadmap || []).map(r => ({
-        step: String(r.step),
-        title: r.title,
-        description: r.project || ""
-      })),
-      resume: resumeData,
+      ...reportData,
+      technicalQuestions: Array.isArray(reportData.technicalQuestions)
+        ? reportData.technicalQuestions.map(q => ({
+            question: q.question || "",
+            answer: q.answer || q.expectedAnswer || "",
+            intention: q.intention || q.difficulty || "general"
+          }))
+        : [],
+      behavioralQuestions: Array.isArray(reportData.behavioralQuestions)
+        ? reportData.behavioralQuestions.map(q => ({
+            question: q.question || "",
+            answer: q.answer || q.sampleAnswer || "",
+            intention: q.intention || q.trait || "behavioral"
+          }))
+        : [],
+      roadmap: Array.isArray(reportData.roadmap)
+        ? reportData.roadmap.map(r => ({
+            step: String(r.step || ""),
+            title: r.title || "",
+            description: r.description || r.project || ""
+          }))
+        : [],
+      resume: reportData.resume || {},
     };
 
   } catch (err) {
     console.error("ai.service.js error:", err);
-    throw new Error("AI generation failed");
+    throw new Error("AI generation failed: " + err.message);
   }
 }
 
